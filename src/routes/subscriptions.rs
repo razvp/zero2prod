@@ -1,10 +1,7 @@
-use crate::startup::State;
-use actix_web::{post, web, HttpRequest, HttpResponse};
+use actix_web::{post, web, HttpResponse};
+use chrono::Utc;
 use serde::Deserialize;
-use sqlx::types::chrono::Local;
-use sqlx::types::Uuid;
-use sqlx::Connection;
-use sqlx::PgConnection;
+use sqlx::PgPool;
 
 #[derive(Deserialize, Debug)]
 struct FormData {
@@ -13,14 +10,10 @@ struct FormData {
 }
 
 #[post("/subscribe")]
-async fn subscribe(req: HttpRequest, form: web::Form<FormData>) -> HttpResponse {
-    let connection_string = &req.app_data::<State>().unwrap().connection_string;
-    let mut connection = PgConnection::connect(connection_string)
-        .await
-        .expect("failed to connect to DB");
+async fn subscribe(pool: web::Data<PgPool>, form: web::Form<FormData>) -> HttpResponse {
     let name = &form.name;
     let email = &form.email;
-    let subscribed_at = Local::now();
+    let subscribed_at = Utc::now();
     let id = uuid::Uuid::new_v4();
 
     let insert = sqlx::query!(
@@ -30,14 +23,14 @@ async fn subscribe(req: HttpRequest, form: web::Form<FormData>) -> HttpResponse 
         name,
         subscribed_at
     )
-    .execute(&mut connection)
+    .execute(pool.as_ref())
     .await;
 
     match insert {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {
-            println!("error: {e:?}");
-            HttpResponse::BadRequest().body("account exists")
+            println!("Failed to execute query: {e}");
+            HttpResponse::BadRequest().body("email exists")
         }
     }
 }
