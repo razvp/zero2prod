@@ -25,8 +25,8 @@ jobs:
       - name: Install sqlx-cli
         run:
             cargo install sqlx-cli
-            # --version=${{ env.SQLX_VERSION }}
-            # --features ${{ env.SQLX_FEATURES }}
+            --version=0.7.3
+            --features=rustls,postgres
             --no-default-features
             --locked
 
