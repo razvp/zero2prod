@@ -3,7 +3,6 @@ use chrono::Utc;
 use serde::Deserialize;
 use sqlx::PgPool;
 use uuid::Uuid;
-use tracing::Instrument;
 
 #[derive(Deserialize, Debug)]
 struct FormData {
@@ -11,44 +10,40 @@ struct FormData {
     email: String,
 }
 
-#[post("/subscribe")]
-async fn subscribe(pool: web::Data<PgPool>, form: web::Form<FormData>) -> HttpResponse {
-    let request_id = Uuid::new_v4();
-    let request_span = tracing::info_span!(
-        "Adding a new subscriber",
-        %request_id,
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(form, pool),
+    fields(
+        request_id = %Uuid::new_v4(),
         subscriber_email = %form.email,
         subscriber_name = %form.name,
-    );
-    tracing::info!(
-        "request_id {request_id} - Adding '{}' '{}' as a new subscriber",
-        form.email,
-        form.name
-    );
-    tracing::info!("request_id {request_id} - Saving new subscriber details in the database");
-    let name = &form.name;
-    let email = &form.email;
-    let subscribed_at = Utc::now();
-    let id = uuid::Uuid::new_v4();
-
-    let insert = sqlx::query!(
-        "INSERT INTO subscriptions (id, email, name, subscribed_at) VALUES ($1, $2, $3, $4)",
-        id,
-        email,
-        name,
-        subscribed_at
     )
-    .execute(pool.as_ref())
-    .await;
-
-    match insert {
-        Ok(_) => {
-            tracing::info!("request_id {request_id} - New subscriber details saved.");
-            HttpResponse::Ok().finish()
-        }
-        Err(e) => {
-            tracing::error!("request_id {request_id} - Failed to execute query: {e}");
-            HttpResponse::BadRequest().body("email exists")
-        }
+)]
+#[post("/subscribe")]
+async fn subscribe(pool: web::Data<PgPool>, form: web::Form<FormData>) -> HttpResponse {
+    match insert_subscriber(&pool, &form).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::BadRequest().body("email exists"),
     }
+}
+
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(form, pool)
+)]
+pub async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "INSERT INTO subscriptions (id, email, name, subscribed_at) VALUES ($1, $2, $3, $4)",
+        Uuid::new_v4(),
+        form.email,
+        form.name,
+        Utc::now()
+    )
+    .execute(pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
