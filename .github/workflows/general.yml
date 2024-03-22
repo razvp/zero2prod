@@ -25,8 +25,13 @@ jobs:
       - name: Install sqlx-cli
         run:
             cargo install sqlx-cli
+<<<<<<< HEAD
             --version=${{ env.SQLX_VERSION }}
             --features ${{ env.SQLX_FEATURES }}
+=======
+            # --version=${{ env.SQLX_VERSION }}
+            # --features ${{ env.SQLX_FEATURES }}
+>>>>>>> 1c328e6 (added postgres service + sqlx-client + migrations for test github workflow)
             --no-default-features
             --locked
 
