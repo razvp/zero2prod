@@ -1,3 +1,4 @@
+use secrecy::ExposeSecret;
 use sqlx::PgPool;
 use std::net::TcpListener;
 
@@ -16,7 +17,7 @@ async fn main() -> Result<(), std::io::Error> {
     let address = format!("127.0.0.1:{}", configuration.application_port);
     let listener = TcpListener::bind(address).expect("failed to bind");
     let connection_string = configuration.database.connection_string();
-    let db_pool = PgPool::connect(&connection_string)
+    let db_pool = PgPool::connect(&connection_string.expose_secret())
         .await
         .expect("failed to connect do DB");
     run(listener, db_pool)?.await
