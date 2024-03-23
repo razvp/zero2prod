@@ -13,7 +13,7 @@ pub fn run(listener: TcpListener, connection_pool: PgPool) -> Result<Server, std
 
     let server = HttpServer::new(move || {
         App::new().app_data(connection.clone())
-            .wrap(Logger::default())
+            .wrap(tracing_actix_web::TracingLogger::default())
             .service(health_check)
             .service(subscribe)
     })
