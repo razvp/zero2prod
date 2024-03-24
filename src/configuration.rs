@@ -26,12 +26,12 @@ pub struct DatabaseSettings {
     pub database_name: String,
     // require_ssl false when running locally and for test suite
     // but true in prod
-    pub require_ssl: bool, 
+    pub require_ssl: bool,
 }
 
 impl DatabaseSettings {
     pub fn without_db(&self) -> PgConnectOptions {
-        let ssl_mode = if self.require_ssl { 
+        let ssl_mode = if self.require_ssl {
             PgSslMode::Require
         } else {
             PgSslMode::Prefer // try encrypted, fallback to unencrypted
@@ -45,8 +45,9 @@ impl DatabaseSettings {
     }
 
     pub fn with_db(&self) -> PgConnectOptions {
-        let mut options = self.without_db().database(&self.database_name).log_statements(tracing_log::log::LevelFilter::Trace);
-        options
+        self.without_db()
+            .database(&self.database_name)
+            .log_statements(tracing_log::log::LevelFilter::Trace)
     }
 }
 
@@ -69,7 +70,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         .add_source(
             config::Environment::with_prefix("APP")
                 .prefix_separator("_")
-                .separator("__")
+                .separator("__"),
         )
         .build()?;
     settings.try_deserialize::<Settings>()
