@@ -1,11 +1,19 @@
-# Builder stage
-FROM rust:1.77.0 as builder
-
+FROM lukemathwalker/cargo-chef:latest-rust-1.77.0 as chef
 WORKDIR /app
 RUN apt update && apt install lld clang -y
+
+FROM chef as planner
+COPY . .
+RUN cargo chef prepare --recipe-path recipe.json
+
+# Builder stage
+FROM chef as builder
+COPY --from=planner /app/recipe.json recipe.json
+# Build dependencies, not app!
+RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 ENV SQLX_OFFLINE true
-RUN cargo build --release
+RUN cargo build --release --bin zero2prod
 
 # Runtime stage
 FROM debian:bookworm-slim as runtime
