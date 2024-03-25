@@ -1,5 +1,3 @@
-use actix_web::web::head;
-use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::{collections::HashMap, net::TcpListener, vec};
 use uuid::Uuid;
@@ -161,7 +159,7 @@ async fn subscribe_returns_a_400_when_fields_are_present_but_invalid() {
         assert_eq!(
             400,
             response.status(),
-            "The API did not return a 200 OK when the payload was {}.",
+            "The API did not return a 400 OK when the payload was {}.",
             description
         );
     }
