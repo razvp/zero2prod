@@ -38,7 +38,7 @@ async fn subscribe(pool: web::Data<PgPool>, form: web::Form<FormData>) -> HttpRe
     };
     match insert_subscriber(&pool, &new_subscriber).await {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(_) => HttpResponse::BadRequest().body("email exists"),
+        Err(_) => HttpResponse::InternalServerError().finish(),
     }
 }
 
