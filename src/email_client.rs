@@ -1,4 +1,4 @@
-use std::time::Duration;
+
 
 use crate::domain::SubscriberEmail;
 use reqwest::{Client, ClientBuilder};
@@ -17,9 +17,10 @@ impl EmailClient {
         base_url: String,
         sender: SubscriberEmail,
         authorization_token: SecretString,
+        timeout: std::time::Duration,
     ) -> Self {
         let http_client = ClientBuilder::new()
-            .timeout(Duration::from_secs(10))
+            .timeout(timeout)
             .build()
             .expect("failed to create http_client for email_client");
         Self {
@@ -81,7 +82,7 @@ mod tests {
         },
         Fake, Faker,
     };
-    use secrecy::{Secret, SecretString};
+    use secrecy::SecretString;
     use wiremock::matchers::header_exists;
     use wiremock::{
         matchers::{any, header, method, path},
@@ -117,7 +118,7 @@ mod tests {
         SubscriberEmail::parse(SafeEmail().fake()).unwrap()
     }
     fn email_client(base_url: String) -> EmailClient {
-        EmailClient::new(base_url, email(), SecretString::new(Faker.fake()))
+        EmailClient::new(base_url, email(), SecretString::new(Faker.fake()), Duration::from_millis(200))
     }
 
     #[tokio::test]
