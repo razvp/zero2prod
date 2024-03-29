@@ -34,7 +34,7 @@ impl TryFrom<FormData> for NewSubscriber {
         subscriber_name = %form.name,
     )
 )]
-#[post("/subscribe")]
+#[post("/subscriptions")]
 async fn subscribe(pool: web::Data<PgPool>, form: web::Form<FormData>) -> HttpResponse {
     let new_subscriber = match NewSubscriber::try_from(form.0) {
         Ok(subscriber) => subscriber,

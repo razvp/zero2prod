@@ -1,17 +1,29 @@
 use std::sync::Once;
 
-use uuid::Uuid;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
+use uuid::Uuid;
 
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
-use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use zero2prod::startup::{get_connection_pool, Application};
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 static TRACING: Once = Once::new();
 
 pub struct TestApp {
     pub address: String,
     pub db_pool: PgPool,
+}
+
+impl TestApp {
+    pub async fn post_subscribe(&self, body: String) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/subscriptions", &self.address))
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(body)
+            .send()
+            .await
+            .expect("failed to execute request")
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
@@ -39,7 +51,7 @@ pub async fn spawn_app() -> TestApp {
 
     let application = Application::build(configuration.clone())
         .await
-    .expect("failed to build applicaiton");
+        .expect("failed to build applicaiton");
 
     let address = format!("http://127.0.0.1:{}", application.port());
     let _ = tokio::spawn(application.run_until_stopped());
