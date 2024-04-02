@@ -7,6 +7,7 @@ use crate::configuration::Settings;
 use crate::email_client::EmailClient;
 use crate::routes::health_check_endpoint;
 use crate::routes::subscribe;
+use crate::routes::confirm;
 
 // need this so we have port for test suite
 pub struct Application {
@@ -67,6 +68,7 @@ pub fn run(
             .wrap(tracing_actix_web::TracingLogger::default())
             .service(health_check_endpoint)
             .service(subscribe)
+            .service(confirm)
     })
     .listen(listener)?
     .run();
