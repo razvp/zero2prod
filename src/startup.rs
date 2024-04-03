@@ -6,6 +6,7 @@ use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
 use crate::routes::health_check_endpoint;
+use crate::routes::publish_newsletter;
 use crate::routes::subscribe;
 use crate::routes::confirm;
 
@@ -80,6 +81,7 @@ pub fn run(
             .service(health_check_endpoint)
             .service(subscribe)
             .service(confirm)
+            .service(publish_newsletter)
     })
     .listen(listener)?
     .run();
