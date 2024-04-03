@@ -10,6 +10,7 @@ use zero2prod::telemetry::{get_subscriber, init_subscriber};
 
 static TRACING: Once = Once::new();
 
+#[derive(Debug)]
 pub struct ConfirmationLinks {
     pub html: reqwest::Url,
     pub plain_text: reqwest::Url,

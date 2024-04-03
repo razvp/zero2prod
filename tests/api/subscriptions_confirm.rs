@@ -21,6 +21,7 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
     let confirmation_links = app.get_confirmation_links(&email_request);
 
+
     // Act
     reqwest::get(confirmation_links.html)
         .await
@@ -43,7 +44,6 @@ async fn clicking_on_the_confirmation_link_confirms_a_subscriber() {
 async fn confirmations_without_token_are_rejected_with_a_400() {
     let app = spawn_app().await;
 
-    dbg!(&app.address);
     let response = reqwest::get(&format!("{}/subscriptions/confirm", app.address))
         .await
         .expect("failed to execute request");
