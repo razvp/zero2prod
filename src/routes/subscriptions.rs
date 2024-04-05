@@ -13,6 +13,7 @@ use crate::domain::SubscriberEmail;
 use crate::domain::SubscriberName;
 use crate::email_client::EmailClient;
 use crate::startup::ApplicationBaseUrl;
+use crate::routes::error_chain_fmt;
 
 #[derive(Deserialize, Debug)]
 struct FormData {
@@ -71,18 +72,6 @@ async fn subscribe(
     Ok(HttpResponse::Ok().finish())
 }
 
-fn error_chain_fmt(
-    e: &impl std::error::Error,
-    f: &mut std::fmt::Formatter<'_>,
-) -> std::fmt::Result {
-    writeln!(f, "{}\n", e)?;
-    let mut current = e.source();
-    while let Some(cause) = current {
-        writeln!(f, "Caused by:\n\t{}", cause)?;
-        current = cause.source();
-    }
-    Ok(())
-}
 
 #[derive(Debug)]
 pub struct StoreTokenError(sqlx::Error);
