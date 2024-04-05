@@ -47,7 +47,7 @@ pub async fn publish_newsletter(
                 email_client
                     .send_email(
                         // clone here so we use it in .with_context()
-                        subscriber.email.clone(), 
+                        &subscriber.email, 
                         &body.title,
                         &body.content.html,
                         &body.content.text,
@@ -87,11 +87,7 @@ struct ConfirmedSubscriber {
 async fn get_confirmed_subscribers(
     pool: &PgPool,
 ) -> Result<Vec<Result<ConfirmedSubscriber, anyhow::Error>>, anyhow::Error> {
-    struct Row {
-        email: String
-    }
-    let rows = sqlx::query_as!(
-        Row,
+    let rows = sqlx::query!(
         "SELECT email FROM subscriptions WHERE status = 'confirmed'"
     )
     .fetch_all(pool)
