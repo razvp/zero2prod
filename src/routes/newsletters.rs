@@ -3,12 +3,13 @@ use actix_web::{
     post, web, HttpRequest, HttpResponse, ResponseError,
 };
 use anyhow::Context;
+use argon2::Argon2;
+use argon2::{PasswordHash, PasswordVerifier};
 use base64::Engine;
 use reqwest::StatusCode;
 use secrecy::{ExposeSecret, SecretString};
 use sqlx::PgPool;
 use tracing::instrument;
-use sha3::Digest;
 
 use crate::{domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt};
 
@@ -161,24 +162,52 @@ async fn get_confirmed_subscribers(
     Ok(confirmed_subscribers)
 }
 
+#[tracing::instrument(name = "Validate credentials", skip(credentials, pool))]
 async fn validate_credentials(
     credentials: Credentials,
     pool: &PgPool,
 ) -> Result<uuid::Uuid, PublishError> {
-    let password_hash = sha3::Sha3_256::digest(credentials.password.expose_secret().as_bytes());
-    let password_hash = format!("{:x}", password_hash);
-    let user_id: Option<_> = sqlx::query!(
-        "SELECT user_id FROM users WHERE username = $1 AND password_hash = $2",
-        credentials.username,
-        password_hash,
+
+    let (user_id, expected_password_hash) = get_stored_credentials(&credentials.username, &pool)
+        .await
+        .map_err(PublishError::UnexpectedError)?
+        .ok_or_else(|| PublishError::AuthError(anyhow::anyhow!("Unknown username.")))?;
+
+    let expected_password_hash = PasswordHash::new(&expected_password_hash.expose_secret())
+        .context("Failed to parse hash in PHC format.")
+        .map_err(PublishError::UnexpectedError)?;
+
+    tracing::info_span!("Verify password hash")
+        .in_scope(|| {
+            Argon2::default().verify_password(
+                credentials.password.expose_secret().as_bytes(),
+                &expected_password_hash,
+            )
+        })
+        .context("Invalid password.")
+        .map_err(PublishError::AuthError)?;
+
+    Ok(user_id)
+}
+
+
+#[tracing::instrument(
+    name = "Get stored credentials",
+    skip(username, pool)
+)]
+async fn get_stored_credentials(
+    username: &str,
+    pool: &PgPool,
+) -> Result<Option<(uuid::Uuid, SecretString)>, anyhow::Error> {
+    let row: Option<_> = sqlx::query!(
+        "SELECT user_id, password_hash FROM USERS
+        WHERE username = $1",
+        username,
     )
     .fetch_optional(pool)
     .await
-    .context("Failed query to validate auth credentials.")
-    .map_err(PublishError::UnexpectedError)?;
+    .context("Failed to perform a query to rertrieve stored credentials.")?
+    .map(|row| (row.user_id, SecretString::new(row.password_hash)));
 
-    user_id
-        .map(|row| row.user_id)
-        .ok_or_else(|| anyhow::anyhow!("Invalid username or password."))
-        .map_err(PublishError::AuthError)
+    Ok(row)
 }
