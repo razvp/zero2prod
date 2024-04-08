@@ -2,11 +2,16 @@ mod health_check;
 mod subscriptions;
 mod subscriptions_confirm;
 mod newsletters;
+mod home;
+mod login_mod;
 
 pub use health_check::health_check_endpoint;
 pub use subscriptions::*;
 pub use subscriptions_confirm::*;
 pub use newsletters::*;
+pub use home::*;
+pub use login_mod::login_form;
+pub use login_mod::login;
 
 pub fn error_chain_fmt(
     e: &impl std::error::Error,

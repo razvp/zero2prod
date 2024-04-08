@@ -6,9 +6,12 @@ use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
 use crate::routes::health_check_endpoint;
+use crate::routes::login;
+use crate::routes::login_form;
 use crate::routes::publish_newsletter;
 use crate::routes::subscribe;
 use crate::routes::confirm;
+use crate::routes::home;
 
 // need this so we have port for test suite
 pub struct Application {
@@ -82,6 +85,9 @@ pub fn run(
             .service(subscribe)
             .service(confirm)
             .service(publish_newsletter)
+            .service(home)
+            .service(login_form)
+            .service(login)
     })
     .listen(listener)?
     .run();
