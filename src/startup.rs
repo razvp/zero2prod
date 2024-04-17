@@ -1,23 +1,29 @@
 use actix_web::{dev::Server, web, App, HttpServer};
+use secrecy::SecretString;
 use sqlx::PgPool;
 use std::net::TcpListener;
 
 use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
+use crate::routes::confirm;
 use crate::routes::health_check_endpoint;
+use crate::routes::home;
 use crate::routes::login;
 use crate::routes::login_form;
 use crate::routes::publish_newsletter;
 use crate::routes::subscribe;
-use crate::routes::confirm;
-use crate::routes::home;
 
 // need this so we have port for test suite
 pub struct Application {
     port: u16,
     server: Server,
 }
+
+// so request handlers/middlewares don't get the SecretString
+// directly, avoiding collision
+#[derive(Clone)]
+pub struct HmacSecret(pub SecretString);
 
 impl Application {
     pub async fn build(configuration: Settings) -> Result<Self, std::io::Error> {
@@ -39,7 +45,13 @@ impl Application {
         );
         let listener = TcpListener::bind(address).expect("failed to bind");
         let port = listener.local_addr().unwrap().port();
-        let server = run(listener, db_pool, email_client, configuration.application.base_url)?;
+        let server = run(
+            listener,
+            db_pool,
+            email_client,
+            configuration.application.base_url,
+            configuration.application.hmac_secret,
+        )?;
 
         Ok(Self { port, server })
     }
@@ -57,19 +69,18 @@ pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
     PgPool::connect_lazy_with(configuration.with_db())
 }
 
-
 // We need to define a wrapper type in order to retrieve the URL
 // in the `subscribe` handler.
 // Retrieval from the context, in actix-web, is type-based: using
 // a raw `String` would expose us to conflicts.
 pub struct ApplicationBaseUrl(pub String);
 
-
 pub fn run(
     listener: TcpListener,
     db_pool: PgPool,
     email_client: EmailClient,
     base_url: String,
+    hmac_secret: SecretString,
 ) -> Result<Server, std::io::Error> {
     let db_pool = web::Data::new(db_pool);
     let email_client = web::Data::new(email_client);
@@ -80,6 +91,7 @@ pub fn run(
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
+            .app_data(web::Data::new(HmacSecret(hmac_secret.clone())))
             .wrap(tracing_actix_web::TracingLogger::default())
             .service(health_check_endpoint)
             .service(subscribe)
