@@ -4,6 +4,7 @@ use reqwest::header::LOCATION;
 
 use actix_web::cookie::Cookie;
 use actix_web::web;
+use actix_web_flash_messages::FlashMessage;
 use secrecy::SecretString;
 use sqlx::PgPool;
 
@@ -45,9 +46,10 @@ pub async fn login(
                 AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
                 AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
             };
+            FlashMessage::error(e.to_string()).send();
             let response = HttpResponse::SeeOther()
+                // the FlashMessages middleware adds the _flash cookie
                 .insert_header((LOCATION, "/login"))
-                .cookie(Cookie::new("_flash", e.to_string()))
                 .finish();
             Err(InternalError::from_response(e, response))
         }

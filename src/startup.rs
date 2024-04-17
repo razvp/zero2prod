@@ -1,7 +1,11 @@
-use actix_web::{dev::Server, web, App, HttpServer};
-use secrecy::SecretString;
-use sqlx::PgPool;
 use std::net::TcpListener;
+
+use actix_web::cookie::Key;
+use actix_web::{dev::Server, web, App, HttpServer};
+use actix_web_flash_messages::storage::CookieMessageStore;
+use actix_web_flash_messages::FlashMessagesFramework;
+use secrecy::{ExposeSecret, SecretString};
+use sqlx::PgPool;
 
 use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
@@ -86,12 +90,17 @@ pub fn run(
     let email_client = web::Data::new(email_client);
     let base_url = web::Data::new(ApplicationBaseUrl(base_url));
 
+    let message_store =
+        CookieMessageStore::builder(Key::from(hmac_secret.expose_secret().as_bytes())).build();
+    let message_framework = FlashMessagesFramework::builder(message_store).build();
+
     let server = HttpServer::new(move || {
         App::new()
             .app_data(db_pool.clone())
             .app_data(email_client.clone())
             .app_data(base_url.clone())
             .app_data(web::Data::new(HmacSecret(hmac_secret.clone())))
+            .wrap(message_framework.clone())
             .wrap(tracing_actix_web::TracingLogger::default())
             .service(health_check_endpoint)
             .service(subscribe)
