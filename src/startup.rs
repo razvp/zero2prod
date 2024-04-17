@@ -12,6 +12,7 @@ use sqlx::PgPool;
 use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
+use crate::routes::admin_dashboard;
 use crate::routes::confirm;
 use crate::routes::health_check_endpoint;
 use crate::routes::home;
@@ -57,6 +58,7 @@ impl Application {
             email_client,
             configuration.application.base_url,
             configuration.application.hmac_secret,
+            configuration.redis_uri,
         )
         .await?;
 
@@ -118,6 +120,7 @@ pub async fn run(
             .service(home)
             .service(login_form)
             .service(login)
+            .service(admin_dashboard)
     })
     .listen(listener)?
     .run();
