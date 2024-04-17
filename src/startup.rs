@@ -1,5 +1,7 @@
 use std::net::TcpListener;
 
+use actix_session::storage::RedisSessionStore;
+use actix_session::SessionMiddleware;
 use actix_web::cookie::Key;
 use actix_web::{dev::Server, web, App, HttpServer};
 use actix_web_flash_messages::storage::CookieMessageStore;
@@ -30,7 +32,7 @@ pub struct Application {
 pub struct HmacSecret(pub SecretString);
 
 impl Application {
-    pub async fn build(configuration: Settings) -> Result<Self, std::io::Error> {
+    pub async fn build(configuration: Settings) -> Result<Self, anyhow::Error> {
         let db_pool = get_connection_pool(&configuration.database);
         let sender_email = configuration
             .email_client
@@ -55,7 +57,8 @@ impl Application {
             email_client,
             configuration.application.base_url,
             configuration.application.hmac_secret,
-        )?;
+        )
+        .await?;
 
         Ok(Self { port, server })
     }
@@ -79,21 +82,23 @@ pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
 // a raw `String` would expose us to conflicts.
 pub struct ApplicationBaseUrl(pub String);
 
-pub fn run(
+pub async fn run(
     listener: TcpListener,
     db_pool: PgPool,
     email_client: EmailClient,
     base_url: String,
     hmac_secret: SecretString,
-) -> Result<Server, std::io::Error> {
+    redis_uri: SecretString,
+) -> Result<Server, anyhow::Error> {
     let db_pool = web::Data::new(db_pool);
     let email_client = web::Data::new(email_client);
     let base_url = web::Data::new(ApplicationBaseUrl(base_url));
 
-    let message_store =
-        CookieMessageStore::builder(Key::from(hmac_secret.expose_secret().as_bytes())).build();
+    let secret_key = Key::from(hmac_secret.expose_secret().as_bytes());
+    let message_store = CookieMessageStore::builder(secret_key.clone()).build();
     let message_framework = FlashMessagesFramework::builder(message_store).build();
 
+    let redis_store = RedisSessionStore::new(redis_uri.expose_secret()).await?;
     let server = HttpServer::new(move || {
         App::new()
             .app_data(db_pool.clone())
@@ -101,6 +106,10 @@ pub fn run(
             .app_data(base_url.clone())
             .app_data(web::Data::new(HmacSecret(hmac_secret.clone())))
             .wrap(message_framework.clone())
+            .wrap(SessionMiddleware::new(
+                redis_store.clone(),
+                secret_key.clone(),
+            ))
             .wrap(tracing_actix_web::TracingLogger::default())
             .service(health_check_endpoint)
             .service(subscribe)
