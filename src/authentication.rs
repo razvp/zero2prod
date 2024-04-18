@@ -1,20 +1,16 @@
-use secrecy::{SecretString, ExposeSecret};
 use anyhow::Context;
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
+use secrecy::{ExposeSecret, SecretString};
 use sqlx::PgPool;
 
-
 use crate::telemetry::spawn_blocking_with_tracing;
-
-
 
 #[derive(thiserror::Error, Debug)]
 pub enum AuthError {
     #[error("Invalid credentials.")]
     InvalidCredentials(#[source] anyhow::Error),
     #[error(transparent)]
-    UnexpectedError(#[from] anyhow::Error)
-
+    UnexpectedError(#[from] anyhow::Error),
 }
 
 pub struct Credentials {
@@ -33,25 +29,28 @@ pub async fn validate_credentials(
     let mut expected_password_hash = SecretString::new(
         "$argon2id$v=19$m=15000,t=2,p=1$\
         gZiV/M1gPc22ElAH/Jh1Hw$\
-        CWOrkoo7oJBQ/iyh7uJ0LO2aLEfrHwTWllSAxT0zRno".to_string()
+        CWOrkoo7oJBQ/iyh7uJ0LO2aLEfrHwTWllSAxT0zRno"
+            .to_string(),
     );
 
-    if let Some((stored_user_id, stored_password_hash)) = get_stored_credentials(&credentials.username, &pool)
-        .await?
+    if let Some((stored_user_id, stored_password_hash)) =
+        get_stored_credentials(&credentials.username, pool).await?
     {
         user_id = Some(stored_user_id);
         expected_password_hash = stored_password_hash;
     }
 
-
-    spawn_blocking_with_tracing(move || verify_password_hash(expected_password_hash, credentials.password))
+    spawn_blocking_with_tracing(move || {
+        verify_password_hash(expected_password_hash, credentials.password)
+    })
     .await
     .context("Failed to spawn blocking task")??;
 
     // Will be Some only if password matches,
     // eliminating the slight risk if password provided matches
     // but user is inexistent
-    user_id.ok_or_else(|| anyhow::anyhow!("Unknown username."))
+    user_id
+        .ok_or_else(|| anyhow::anyhow!("Unknown username."))
         .map_err(AuthError::InvalidCredentials)
 }
 

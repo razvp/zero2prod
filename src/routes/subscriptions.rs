@@ -1,19 +1,19 @@
 use actix_web::http::StatusCode;
 use actix_web::{post, web, HttpResponse, ResponseError};
+use anyhow::Context;
 use chrono::Utc;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
 use serde::Deserialize;
 use sqlx::{Executor, PgPool, Postgres, Transaction};
 use uuid::Uuid;
-use anyhow::Context;
 
 use crate::domain::NewSubscriber;
 use crate::domain::SubscriberEmail;
 use crate::domain::SubscriberName;
 use crate::email_client::EmailClient;
-use crate::startup::ApplicationBaseUrl;
 use crate::routes::error_chain_fmt;
+use crate::startup::ApplicationBaseUrl;
 
 #[derive(Deserialize, Debug)]
 struct FormData {
@@ -47,15 +47,19 @@ async fn subscribe(
     email_client: web::Data<EmailClient>,
     base_url: web::Data<ApplicationBaseUrl>,
 ) -> Result<HttpResponse, SubscribeError> {
-    let mut transaction = pool.begin().await.context("Failed to acquire a Postgres connection from the pool.")?;
+    let mut transaction = pool
+        .begin()
+        .await
+        .context("Failed to acquire a Postgres connection from the pool.")?;
 
     let new_subscriber = form.0.try_into().map_err(SubscribeError::ValidationError)?;
     let subscriber_id = insert_subscriber(&mut transaction, &new_subscriber)
         .await
         .context("Failed to insert new subscriber in the database.")?;
     let subscription_token = generate_subscription_token();
-    store_token(&mut transaction, subscriber_id, &subscription_token).await
-    .context("Failed to store the confirmation token for a new subscriber.")?;
+    store_token(&mut transaction, subscriber_id, &subscription_token)
+        .await
+        .context("Failed to store the confirmation token for a new subscriber.")?;
     transaction
         .commit()
         .await
@@ -67,16 +71,25 @@ async fn subscribe(
         &base_url.0,
         &subscription_token,
     )
-    .await.context("Failed to send a confirmation email.")?;
+    .await
+    .context("Failed to send a confirmation email.")?;
 
     Ok(HttpResponse::Ok().finish())
 }
 
-
-#[derive(Debug)]
 pub struct StoreTokenError(sqlx::Error);
 
-impl std::error::Error for StoreTokenError {}
+impl std::error::Error for StoreTokenError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
+impl std::fmt::Debug for StoreTokenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
 
 impl std::fmt::Display for StoreTokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

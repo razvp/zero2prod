@@ -1,7 +1,9 @@
-use wiremock::{matchers::{method, path}, Mock, ResponseTemplate};
+use wiremock::{
+    matchers::{method, path},
+    Mock, ResponseTemplate,
+};
 
 use crate::helpers::spawn_app;
-
 
 #[tokio::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
@@ -16,7 +18,6 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let response = test_app.post_subscribe(body.into()).await;
 
     assert_eq!(200, response.status());
-
 }
 
 #[tokio::test]
@@ -116,7 +117,7 @@ async fn subscribe_sends_a_confirmation_email_with_a_link() {
 
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
 
-    let confirmation_links = app.get_confirmation_links(&email_request);
+    let confirmation_links = app.get_confirmation_links(email_request);
 
     assert_eq!(confirmation_links.html, confirmation_links.plain_text);
 }
@@ -126,13 +127,13 @@ async fn subscribe_fails_if_there_is_a_fatal_database_error() {
     // Arrange
     let app = spawn_app().await;
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
-    // Sabotage the db 
+    // Sabotage the db
     sqlx::query!("ALTER TABLE subscription_tokens DROP COLUMN subscription_token;")
         .execute(&app.db_pool)
         .await
         .unwrap();
     // Act
     let response = app.post_subscribe(body.into()).await;
-    // Assert 
+    // Assert
     assert_eq!(response.status(), 500);
 }

@@ -3,7 +3,6 @@ use actix_web::{post, HttpResponse};
 use reqwest::header::LOCATION;
 
 use actix_session::Session;
-use actix_web::cookie::Cookie;
 use actix_web::web;
 use actix_web_flash_messages::FlashMessage;
 use secrecy::SecretString;
@@ -53,10 +52,6 @@ pub async fn login(
                 AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
             };
             FlashMessage::error(e.to_string()).send();
-            let response = HttpResponse::SeeOther()
-                // the FlashMessages middleware adds the _flash cookie
-                .insert_header((LOCATION, "/login"))
-                .finish();
             Err(login_redirect(e))
         }
     }

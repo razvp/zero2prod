@@ -3,7 +3,6 @@ use uuid::Uuid;
 use wiremock::matchers::{any, method, path};
 use wiremock::{Mock, ResponseTemplate};
 
-
 #[tokio::test]
 async fn invalid_password_is_rejected() {
     // Arrange
@@ -26,9 +25,11 @@ async fn invalid_password_is_rejected() {
         .expect("failed to execute request");
     // Assert
     assert_eq!(401, response.status());
-    assert_eq!(r#"Basic realm="publish""#, response.headers()["WWW-Authenticate"]);
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
 }
-
 
 #[tokio::test]
 async fn non_existing_user_is_rejected() {
@@ -52,9 +53,11 @@ async fn non_existing_user_is_rejected() {
         .expect("failed to execute request");
     // Assert
     assert_eq!(401, response.status());
-    assert_eq!(r#"Basic realm="publish""#, response.headers()["WWW-Authenticate"]);
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
 }
-
 
 #[tokio::test]
 async fn requests_missing_authorization_are_rejected() {
@@ -74,14 +77,13 @@ async fn requests_missing_authorization_are_rejected() {
         .await
         .expect("failed to execute request");
 
-
-    
-
     // Assert
     assert_eq!(401, response.status());
-    assert_eq!(r#"Basic realm="publish""#, response.headers()["WWW-Authenticate"]);
+    assert_eq!(
+        r#"Basic realm="publish""#,
+        response.headers()["WWW-Authenticate"]
+    );
 }
-
 
 #[tokio::test]
 async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
@@ -161,8 +163,12 @@ async fn newsletters_returns_400_for_invalid_data() {
 
     for (invalid_body, error_message) in test_cases {
         let response = app.post_newsletters(invalid_body).await;
-        assert_eq!(400, response.status(),
-        "The API did not fail with 400 Bad Request when the payload was {}.", error_message);
+        assert_eq!(
+            400,
+            response.status(),
+            "The API did not fail with 400 Bad Request when the payload was {}.",
+            error_message
+        );
     }
 }
 
@@ -190,7 +196,7 @@ async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
         .unwrap()
         .pop()
         .unwrap();
-    app.get_confirmation_links(&email_request)
+    app.get_confirmation_links(email_request)
 }
 
 async fn create_confirmed_subscriber(app: &TestApp) {

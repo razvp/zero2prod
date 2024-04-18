@@ -1,6 +1,6 @@
 mod admin;
 mod health_check;
-mod home;
+pub mod home;
 mod login_mod;
 mod newsletters;
 mod subscriptions;

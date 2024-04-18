@@ -3,16 +3,14 @@ use actix_web::{
     post, web, HttpRequest, HttpResponse, ResponseError,
 };
 use anyhow::Context;
-use argon2::Argon2;
-use argon2::{PasswordHash, PasswordVerifier};
 use base64::Engine;
 use reqwest::StatusCode;
-use secrecy::{ExposeSecret, SecretString};
+use secrecy::SecretString;
 use sqlx::PgPool;
 use tracing::instrument;
 
-use crate::{domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt, telemetry::spawn_blocking_with_tracing};
 use crate::authentication::{validate_credentials, AuthError, Credentials};
+use crate::{domain::SubscriberEmail, email_client::EmailClient, routes::error_chain_fmt};
 
 #[derive(thiserror::Error)]
 pub enum PublishError {
@@ -40,7 +38,6 @@ pub struct Content {
     text: String,
 }
 
-
 fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Error> {
     let header_value = headers
         .get("Authorization")
@@ -56,7 +53,7 @@ fn basic_authentication(headers: &HeaderMap) -> Result<Credentials, anyhow::Erro
     let decoded_credentials = String::from_utf8(decoded_bytes)
         .context("The decoded credential string is not valid UTF8")?;
 
-    let mut credentials = decoded_credentials.splitn(2, ":");
+    let mut credentials = decoded_credentials.splitn(2, ':');
     let username = credentials
         .next()
         .ok_or_else(|| anyhow::anyhow!("A username must be provided in 'Basic' auth."))?
@@ -85,7 +82,7 @@ pub async fn publish_newsletter(
     request: HttpRequest,
 ) -> Result<HttpResponse, PublishError> {
     let credentials = basic_authentication(request.headers()).map_err(PublishError::AuthError)?;
-    let user_id = validate_credentials(credentials, &pool)
+    validate_credentials(credentials, &pool)
         .await
         .map_err(|e| match e {
             AuthError::InvalidCredentials(_) => PublishError::AuthError(e.into()),
@@ -163,6 +160,3 @@ async fn get_confirmed_subscribers(
 
     Ok(confirmed_subscribers)
 }
-
-
-

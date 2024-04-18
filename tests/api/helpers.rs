@@ -2,7 +2,6 @@ use std::sync::Once;
 
 use argon2::password_hash::SaltString;
 use argon2::{Algorithm, Argon2, Params, PasswordHasher, Version};
-use config::builder;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use wiremock::MockServer;
@@ -115,8 +114,8 @@ impl TestApp {
             confirmation_link
         };
 
-        let html_link = get_link(&body["HtmlBody"].as_str().unwrap());
-        let text_link = get_link(&body["TextBody"].as_str().unwrap());
+        let html_link = get_link(body["HtmlBody"].as_str().unwrap());
+        let text_link = get_link(body["TextBody"].as_str().unwrap());
 
         ConfirmationLinks {
             html: html_link,
@@ -184,6 +183,7 @@ pub async fn spawn_app() -> TestApp {
     let application_port = application.port();
 
     let address = format!("http://127.0.0.1:{}", application.port());
+    #[allow(clippy::let_underscore_future)]
     let _ = tokio::spawn(application.run_until_stopped());
 
     let client = reqwest::Client::builder()

@@ -1,7 +1,3 @@
-use std::collections::HashSet;
-
-use reqwest::header::HeaderValue;
-
 use crate::helpers::assert_is_redirect_to;
 use crate::helpers::spawn_app;
 
