@@ -7,7 +7,6 @@ use uuid::Uuid;
 use crate::session_state::TypedSession;
 use crate::utils::e500;
 
-#[get("/admin/dashboard")]
 pub async fn admin_dashboard(
     session: TypedSession,
     pool: web::Data<PgPool>,

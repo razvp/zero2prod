@@ -1,6 +1,6 @@
 use actix_web::{get, http::header::ContentType, HttpResponse};
 
-use actix_web_flash_messages::{IncomingFlashMessages, Level};
+use actix_web_flash_messages::IncomingFlashMessages;
 use std::fmt::Write;
 
 #[get("/login")]
