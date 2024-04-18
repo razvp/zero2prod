@@ -68,6 +68,13 @@ pub struct TestApp {
 }
 
 impl TestApp {
+    pub async fn get_admin_dashboard(&self) -> reqwest::Response {
+        self.api_client
+            .get(&format!("{}/admin/dashboard", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request")
+    }
     pub async fn get_admin_dashboard_html(&self) -> String {
         self.api_client
             .get(&format!("{}/admin/dashboard", &self.address))
