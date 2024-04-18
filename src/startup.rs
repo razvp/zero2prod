@@ -12,7 +12,6 @@ use sqlx::PgPool;
 use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
-use crate::routes::health_check_endpoint;
 use crate::routes::home;
 use crate::routes::login;
 use crate::routes::login_form;
@@ -20,6 +19,7 @@ use crate::routes::publish_newsletter;
 use crate::routes::subscribe;
 use crate::routes::{admin_dashboard, change_password_form};
 use crate::routes::{change_password, confirm};
+use crate::routes::{health_check_endpoint, log_out};
 
 // need this so we have port for test suite
 pub struct Application {
@@ -123,6 +123,7 @@ pub async fn run(
             .service(login_form)
             .service(login)
             .service(admin_dashboard)
+            .service(log_out)
     })
     .listen(listener)?
     .run();
