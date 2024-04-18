@@ -12,14 +12,14 @@ use sqlx::PgPool;
 use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
-use crate::routes::admin_dashboard;
-use crate::routes::confirm;
 use crate::routes::health_check_endpoint;
 use crate::routes::home;
 use crate::routes::login;
 use crate::routes::login_form;
 use crate::routes::publish_newsletter;
 use crate::routes::subscribe;
+use crate::routes::{admin_dashboard, change_password_form};
+use crate::routes::{change_password, confirm};
 
 // need this so we have port for test suite
 pub struct Application {
@@ -113,6 +113,8 @@ pub async fn run(
                 secret_key.clone(),
             ))
             .wrap(tracing_actix_web::TracingLogger::default())
+            .service(change_password_form)
+            .service(change_password)
             .service(health_check_endpoint)
             .service(subscribe)
             .service(confirm)
