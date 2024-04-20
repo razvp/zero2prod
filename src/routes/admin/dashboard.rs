@@ -1,4 +1,4 @@
-use actix_web::{get, http::header::ContentType, web, HttpResponse};
+use actix_web::{http::header::ContentType, web, HttpResponse};
 use anyhow::Context;
 use reqwest::header::LOCATION;
 use sqlx::PgPool;
@@ -33,6 +33,7 @@ pub async fn admin_dashboard(
       <p>Available actions:</p>
       <ol>
          <li><a href="/admin/password">Change password</a></li>
+         <li><a href="/admin/newsletters">Publish newsletter</a></li>
          <li>
             <form name="logoutForm" action="/admin/logout" method="post">
             <input type="submit" value="Logout">

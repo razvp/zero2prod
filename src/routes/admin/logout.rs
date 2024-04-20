@@ -1,6 +1,6 @@
 use crate::session_state::TypedSession;
 use crate::utils::{e500, see_other};
-use actix_web::{post, HttpResponse};
+use actix_web::HttpResponse;
 use actix_web_flash_messages::FlashMessage;
 
 pub async fn log_out(session: TypedSession) -> Result<HttpResponse, actix_web::Error> {

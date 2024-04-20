@@ -14,7 +14,6 @@ use crate::authentication::reject_anonymous_users;
 use crate::configuration::DatabaseSettings;
 use crate::configuration::Settings;
 use crate::email_client::EmailClient;
-use crate::routes::home;
 use crate::routes::login;
 use crate::routes::login_form;
 use crate::routes::publish_newsletter;
@@ -22,6 +21,7 @@ use crate::routes::subscribe;
 use crate::routes::{admin_dashboard, change_password_form};
 use crate::routes::{change_password, confirm};
 use crate::routes::{health_check_endpoint, log_out};
+use crate::routes::{home, publish_newsletter_form};
 
 // need this so we have port for test suite
 pub struct Application {
@@ -119,6 +119,8 @@ pub async fn run(
                 web::scope("/admin")
                     .wrap(from_fn(reject_anonymous_users))
                     .route("/dashboard", web::get().to(admin_dashboard))
+                    .route("/newsletters", web::get().to(publish_newsletter_form))
+                    .route("/newsletters", web::post().to(publish_newsletter))
                     .route("/password", web::get().to(change_password_form))
                     .route("/password", web::post().to(change_password))
                     .route("/logout", web::post().to(log_out)),
@@ -126,7 +128,6 @@ pub async fn run(
             .service(health_check_endpoint)
             .service(subscribe)
             .service(confirm)
-            .service(publish_newsletter)
             .service(home)
             .service(login_form)
             .service(login)

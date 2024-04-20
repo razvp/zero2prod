@@ -2,7 +2,6 @@ mod admin;
 mod health_check;
 pub mod home;
 mod login_mod;
-mod newsletters;
 mod subscriptions;
 mod subscriptions_confirm;
 
@@ -13,7 +12,6 @@ pub use health_check::health_check_endpoint;
 pub use home::*;
 pub use login_mod::login;
 pub use login_mod::login_form;
-pub use newsletters::*;
 pub use subscriptions::*;
 pub use subscriptions_confirm::*;
 
