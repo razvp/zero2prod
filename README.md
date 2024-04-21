@@ -1,3 +1,5 @@
+Newsletter app: manage subscribers and publish newsleters.
+
 ## To run locally
 Launch PostgreSQL and Redis containers:
 ```bash
