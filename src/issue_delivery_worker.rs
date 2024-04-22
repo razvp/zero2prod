@@ -1,11 +1,13 @@
 use std::time::Duration;
 
-use crate::{domain::SubscriberEmail, email_client::EmailClient};
 use sqlx::{Executor, PgPool, Postgres, Transaction};
 use tracing::{field::display, Span};
 use uuid::Uuid;
 
-enum ExecutionOutcome {
+use crate::{configuration::Settings, startup::get_connection_pool};
+use crate::{domain::SubscriberEmail, email_client::EmailClient};
+
+pub enum ExecutionOutcome {
     TaskCompleted,
     EmptyQueue,
 }
@@ -18,7 +20,10 @@ enum ExecutionOutcome {
     ),
     err
 )]
-async fn try_execute_task(pool: &PgPool, email_client: &EmailClient) -> Result<(), anyhow::Error> {
+pub async fn try_execute_task(
+    pool: &PgPool,
+    email_client: &EmailClient,
+) -> Result<ExecutionOutcome, anyhow::Error> {
     let task = dequeue_task(pool).await?;
     if task.is_none() {
         return Ok(ExecutionOutcome::EmptyQueue);
@@ -63,7 +68,7 @@ async fn try_execute_task(pool: &PgPool, email_client: &EmailClient) -> Result<(
         delete_task(transaction, issue_id, &email).await?;
     }
 
-    Ok(())
+    Ok(ExecutionOutcome::TaskCompleted)
 }
 
 type PgTransaction = Transaction<'static, Postgres>;
@@ -73,16 +78,17 @@ async fn dequeue_task(
     pool: &PgPool,
 ) -> Result<Option<(PgTransaction, Uuid, String)>, anyhow::Error> {
     let mut transaction = pool.begin().await?;
-    let query = sqlx::query!(
+    let r = sqlx::query!(
         r#"
-            SELECT newsletter_issue_id, subscriber_email,
+            SELECT newsletter_issue_id, subscriber_email
             FROM issue_delivery_queue
             FOR UPDATE
             SKIP LOCKED
             LIMIT 1
         "#,
-    );
-    let r = transaction.fetch_optional(query).await?;
+    )
+    .fetch_optional(&mut *transaction)
+    .await?;
     if let Some(r) = r {
         Ok(Some((
             transaction,
@@ -128,7 +134,7 @@ async fn get_issue(pool: &PgPool, issue_id: Uuid) -> Result<NewsletterIssue, any
         NewsletterIssue,
         r#"
             SELECT title, text_content, html_content
-            FROM newsletter_issue
+            FROM newsletter_issues
             WHERE
                 newsletter_issue_id = $1
         "#,
@@ -140,7 +146,7 @@ async fn get_issue(pool: &PgPool, issue_id: Uuid) -> Result<NewsletterIssue, any
     Ok(issue)
 }
 
-async fn worker_loop(pool: &PgPool, email_client: &EmailClient) -> Result<(), anyhow::Error> {
+async fn worker_loop(pool: PgPool, email_client: EmailClient) -> Result<(), anyhow::Error> {
     loop {
         match try_execute_task(&pool, &email_client).await {
             Ok(ExecutionOutcome::EmptyQueue) => {
@@ -152,4 +158,10 @@ async fn worker_loop(pool: &PgPool, email_client: &EmailClient) -> Result<(), an
             Ok(ExecutionOutcome::TaskCompleted) => {}
         }
     }
+}
+
+pub async fn run_worker_until_stopped(configuration: Settings) -> Result<(), anyhow::Error> {
+    let connection_pool = get_connection_pool(&configuration.database);
+    let email_client = configuration.email_client.client();
+    worker_loop(connection_pool, email_client).await
 }
