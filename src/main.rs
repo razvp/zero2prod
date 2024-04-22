@@ -1,6 +1,5 @@
-use std::fmt::Display;
-
 use tokio::task::JoinError;
+
 use zero2prod::configuration::get_configuration;
 use zero2prod::issue_delivery_worker::run_worker_until_stopped;
 use zero2prod::startup::Application;

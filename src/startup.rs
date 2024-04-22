@@ -37,10 +37,6 @@ pub struct HmacSecret(pub SecretString);
 impl Application {
     pub async fn build(configuration: Settings) -> Result<Self, anyhow::Error> {
         let db_pool = get_connection_pool(&configuration.database);
-        let sender_email = configuration
-            .email_client
-            .sender()
-            .expect("invalid sender email address");
         let email_client = configuration.email_client.client();
 
         let address = format!(

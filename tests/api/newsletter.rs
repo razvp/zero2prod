@@ -1,13 +1,12 @@
 use std::time::Duration;
 
-use crate::helpers::{assert_is_redirect_to, spawn_app, ConfirmationLinks, TestApp};
-use wiremock::matchers::{any, method, path};
-use wiremock::{Mock, ResponseTemplate};
-
 use fake::faker::internet::en::SafeEmail;
 use fake::faker::name::en::Name;
 use fake::Fake;
-use wiremock::MockBuilder;
+use wiremock::matchers::{any, method, path};
+use wiremock::{Mock, ResponseTemplate};
+
+use crate::helpers::{assert_is_redirect_to, spawn_app, ConfirmationLinks, TestApp};
 
 async fn create_unconfirmed_subscriber(app: &TestApp) -> ConfirmationLinks {
     let name: String = Name().fake();

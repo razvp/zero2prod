@@ -1,8 +1,7 @@
-
-
-use crate::domain::SubscriberEmail;
 use reqwest::{Client, ClientBuilder};
 use secrecy::{ExposeSecret, SecretString};
+
+use crate::domain::SubscriberEmail;
 
 #[derive(Clone)]
 pub struct EmailClient {
@@ -118,7 +117,12 @@ mod tests {
         SubscriberEmail::parse(SafeEmail().fake()).unwrap()
     }
     fn email_client(base_url: String) -> EmailClient {
-        EmailClient::new(base_url, email(), SecretString::new(Faker.fake()), Duration::from_millis(200))
+        EmailClient::new(
+            base_url,
+            email(),
+            SecretString::new(Faker.fake()),
+            Duration::from_millis(200),
+        )
     }
 
     #[tokio::test]
